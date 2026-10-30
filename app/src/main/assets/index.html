@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Quản Lý Tiền Ăn</title>
+<style>
+  :root {
+    --bg: #f0f2f5;
+    --card: #fff;
+    --primary: #1877f2;
+    --success: #31a24c;
+    --danger: #e41e3f;
+    --text: #050505;
+    --muted: #65676b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: 110px;
+  }
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 14px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-size: 18px; }
+  .container { padding: 10px; max-width: 500px; margin: 0 auto; }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .summary-card {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    cursor: pointer;
+  }
+  .summary-card .label { font-size: 11px; color: var(--muted); }
+  .summary-card .value { font-size: 18px; font-weight: 700; margin-top: 2px; }
+  .summary-card.chua-nhan .value { color: #f7b928; }
+  .summary-card.chua-thu .value { color: var(--danger); }
+  .last-received {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .nv-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .nv-box {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 12px 10px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .nv-box .name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .nv-box .money { font-size: 17px; font-weight: 700; }
+  .nv-box .money.positive { color: var(--success); }
+  .nv-box .money.negative { color: var(--danger); }
+  .nv-box .money.zero { color: var(--muted); }
+  .nv-box .status { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    align-items: flex-end;
+  }
+  .modal.active { display: flex; }
+  .modal-content {
+    background: white;
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    padding: 18px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal h2 { margin-bottom: 12px; font-size: 18px; }
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .form-group input, .form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+  }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .nv-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+  }
+  .nv-buttons button {
+    flex: 1 1 calc(33% - 8px);
+    min-width: 88px;
+    padding: 12px 6px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background: #e4e6eb;
+    color: #333;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .nv-buttons button.on {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+  .nv-buttons button.all {
+    flex: 1 1 100%;
+    background: #e4e6eb;
+    font-weight: 700;
+  }
+  .nv-buttons button.all.on {
+    background: var(--primary);
+    color: white;
+  }
+  .btn-row { display: flex; gap: 10px; margin-top: 8px; }
+  .btn-row button { flex: 1; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-secondary { background: #e4e6eb; }
+  .btn-success { background: var(--success); color: white; }
+  .history-item { padding: 10px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+  .history-item .date { color: var(--muted); font-size: 12px; }
+  .day-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+  }
+  .day-item .date-line { font-weight: 600; font-size: 15px; }
+  .day-item .detail { margin-left: 16px; margin-top: 4px; font-size: 14px; color: #333; }
+  .fab-container {
+    position: fixed;
+    bottom: 12px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 10px;
+  }
+  .fab {
+    flex: 1;
+    height: 46px;
+    border: none;
+    border-radius: 23px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+  }
+  .fab-nhap { background: var(--primary); }
+  .fab-ung { background: var(--danger); }
+  .fab-tt { background: var(--success); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Quản Lý Tiền Ăn</h1>
+</header>
+<div class="container">
+  <div class="summary-grid">
+    <div class="summary-card chua-nhan" onclick="showChuaNhan()">
+      <div class="label">Chưa nhận từ chủ</div>
+      <div class="value" id="chuaNhan">0 đ</div>
+    </div>
+    <div class="summary-card chua-thu">
+      <div class="label">Tổng tiền ăn chưa đưa</div>
+      <div class="value" id="chuaThu">0 đ</div>
+    </div>
+  </div>
+  <div class="last-received" id="lastReceived">Chưa có lần nhận nào</div>
+  <div class="nv-grid" id="nvList"></div>
+</div>
+
+<!-- Modal nhập -->
+<div class="modal" id="modalNhap">
+  <div class="modal-content">
+    <h2>Nhập tiền ăn chung</h2>
+    <div class="form-group">
+      <label>Hệ số k (nghìn đồng) — 25 = 25.000đ</label>
+      <input type="number" id="kNhap" value="25" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label>Ghi chú</label>
+      <textarea id="noteNhap" rows="2"></textarea>
+    </div>
+    <div class="nv-buttons" id="btnNhap"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="closeModal('modalNhap')">Hủy</button>
+      <button class="btn-primary" onclick="xacNhanNhap()">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal ứng -->
+<div class="modal" id="modalUng">
+  <div class="modal-content">
+    <h2>Ứng tiền ăn</h2>
+    <div class="form-group">
+      <label>Hệ số k (nghìn đồng)</label>
+      <input type="number" id="kUng" placeholder="Ví dụ 10" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label>Ghi chú</label>
+      <textarea id="noteUng" rows="2"></textarea>
+    </div>
+    <div class="nv-buttons" id="btnUng"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="closeModal('modalUng')">Hủy</button>
+      <button class="btn-primary" onclick="xacNhanUng()">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal thanh toán -->
+<div class="modal" id="modalTT">
+  <div class="modal-content">
+    <h2>Thanh toán</h2>
+    <div class="form-group">
+      <label>Hệ số k (nghìn đồng) — để trống = trả hết nợ</label>
+      <input type="number" id="kTT" placeholder="Để trống để trả hết nợ" inputmode="numeric">
+      <div class="hint">Nếu để trống, sẽ trả toàn bộ số nợ hiện tại của từng người được chọn.</div>
+    </div>
+    <div class="form-group">
+      <label>Ghi chú</label>
+      <textarea id="noteTT" rows="2"></textarea>
+    </div>
+    <div class="nv-buttons" id="btnTT"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="closeModal('modalTT')">Hủy</button>
+      <button class="btn-primary" onclick="xacNhanTT()">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal lịch sử NV -->
+<div class="modal" id="modalHistory">
+  <div class="modal-content">
+    <h2 id="historyTitle">Lịch sử</h2>
+    <div id="historyList"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="closeModal('modalHistory')">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal chưa nhận từ chủ -->
+<div class="modal" id="modalChuaNhan">
+  <div class="modal-content">
+    <h2>Chưa nhận từ chủ</h2>
+    <div id="chuaNhanList"></div>
+    <div class="btn-row">
+      <button class="btn-success" onclick="daNhanDu()">Đã nhận đủ</button>
+      <button class="btn-secondary" onclick="showSoat()">Soát</button>
+      <button class="btn-secondary" onclick="closeModal('modalChuaNhan')">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Soát (chỉ xem) -->
+<div class="modal" id="modalSoat">
+  <div class="modal-content">
+    <h2>Soát lịch sử đã nhận</h2>
+    <div id="soatList"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="closeModal('modalSoat')">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<div class="fab-container">
+  <button class="fab fab-nhap" onclick="openNhap()">+ Nhập</button>
+  <button class="fab fab-ung" onclick="openUng()">Ứng</button>
+  <button class="fab fab-tt" onclick="openTT()">Thanh toán</button>
+</div>
+
+<script>
+const EMPLOYEES = ["Tú", "Bảnh", "Sơn", "Phong", "Nghĩa", "Nhân"];
+const CALC_EMPLOYEES = EMPLOYEES.filter(nv => nv !== "Nhân");
+let data = JSON.parse(localStorage.getItem("tienan_data_v9") || "{}");
+
+if (typeof data.chuaNhan !== "number") data.chuaNhan = 0;
+if (!data.nhanHistory) data.nhanHistory = [];
+if (!data.archivedHistory) data.archivedHistory = [];
+if (!data.lastReceived) data.lastReceived = null;
+EMPLOYEES.forEach(nv => {
+  if (!data[nv]) data[nv] = { balance: 0, history: [] };
+});
+
+function formatMoney(n) {
+  return new Intl.NumberFormat("vi-VN").format(Math.abs(n)) + " đ";
+}
+
+function getTransactionDate() {
+  const now = new Date();
+  if (now.getHours() < 2) now.setDate(now.getDate() - 1);
+  return now.toLocaleString("vi-VN", { 
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit"
+  });
+}
+
+function getFullDate() {
+  const now = new Date();
+  if (now.getHours() < 2) now.setDate(now.getDate() - 1);
+  return now.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function saveData() {
+  localStorage.setItem("tienan_data_v9", JSON.stringify(data));
+}
+
+function calcTongChuaDua() {
+  let sum = 0;
+  CALC_EMPLOYEES.forEach(nv => {
+    sum += data[nv].balance;
+  });
+  return sum;
+}
+
+function render() {
+  const list = document.getElementById("nvList");
+  list.innerHTML = "";
+
+  EMPLOYEES.forEach(nv => {
+    const bal = data[nv].balance;
+    const box = document.createElement("div");
+    box.className = "nv-box";
+    let cls = "zero";
+    let status = "Hết tiền";
+    if (bal > 0) {
+      cls = "positive";
+      status = `Nhân thiếu ${nv}`;
+    } else if (bal < 0) {
+      cls = "negative";
+      status = `${nv} thiếu Nhân`;
+    }
+    box.innerHTML = `
+      <div class="name">${nv}</div>
+      <div class="money ${cls}">${bal >= 0 ? "+" : "-"}${formatMoney(bal)}</div>
+      <div class="status">${status}</div>
+    `;
+    box.onclick = () => showHistory(nv);
+    list.appendChild(box);
+  });
+
+  document.getElementById("chuaNhan").textContent = formatMoney(data.chuaNhan);
+  document.getElementById("chuaThu").textContent = formatMoney(calcTongChuaDua());
+
+  const lr = document.getElementById("lastReceived");
+  if (data.lastReceived) {
+    lr.textContent = `Nhận lần cuối vào ngày ${data.lastReceived.date} (${formatMoney(data.lastReceived.amount)})`;
+  } else {
+    lr.textContent = "Chưa có lần nhận nào";
+  }
+}
+
+function buildToggleButtons(containerId, defaultOn = false) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  EMPLOYEES.forEach(nv => {
+    const btn = document.createElement("button");
+    btn.textContent = nv;
+    btn.dataset.nv = nv;
+    if (defaultOn) btn.classList.add("on");
+    btn.onclick = () => btn.classList.toggle("on");
+    container.appendChild(btn);
+  });
+  const allBtn = document.createElement("button");
+  allBtn.textContent = "Tất cả";
+  allBtn.className = "all" + (defaultOn ? " on" : "");
+  allBtn.onclick = () => {
+    const turnOn = !allBtn.classList.contains("on");
+    allBtn.classList.toggle("on", turnOn);
+    container.querySelectorAll("button:not(.all)").forEach(b => {
+      b.classList.toggle("on", turnOn);
+    });
+  };
+  container.appendChild(allBtn);
+}
+
+function getSelected(containerId) {
+  return Array.from(document.querySelectorAll(`#${containerId} button.on:not(.all)`))
+    .map(b => b.dataset.nv);
+}
+
+function openNhap() {
+  document.getElementById("kNhap").value = "25";
+  document.getElementById("noteNhap").value = "";
+  buildToggleButtons("btnNhap", true);
+  document.getElementById("modalNhap").classList.add("active");
+}
+
+function openUng() {
+  document.getElementById("kUng").value = "";
+  document.getElementById("noteUng").value = "";
+  buildToggleButtons("btnUng", true);
+  document.getElementById("modalUng").classList.add("active");
+}
+
+function openTT() {
+  document.getElementById("kTT").value = "";
+  document.getElementById("noteTT").value = "";
+  buildToggleButtons("btnTT", false);
+  document.getElementById("modalTT").classList.add("active");
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove("active");
+}
+
+function xacNhanNhap() {
+  const k = parseInt(document.getElementById("kNhap").value) || 0;
+  const amount = k * 1000;
+  const note = document.getElementById("noteNhap").value.trim() || "Tiền ăn chung";
+  const selected = getSelected("btnNhap");
+  if (amount <= 0 || selected.length === 0) {
+    alert("Nhập hệ số k và chọn ít nhất 1 người");
+    return;
+  }
+  selected.forEach(nv => {
+    data[nv].balance += amount;
+    data[nv].history.unshift({
+      date: getTransactionDate(),
+      type: "Nhận tiền ăn",
+      amount: amount,
+      note: note
+    });
+  });
+  const total = amount * selected.length;
+  data.chuaNhan += total;
+  data.nhanHistory.unshift({
+    date: getFullDate(),
+    count: selected.length,
+    k: k,
+    total: total,
+    note: note
+  });
+  saveData();
+  closeModal("modalNhap");
+  render();
+}
+
+function xacNhanUng() {
+  const k = parseInt(document.getElementById("kUng").value) || 0;
+  const amount = k * 1000;
+  const note = document.getElementById("noteUng").value.trim() || "Ứng tiền ăn";
+  const selected = getSelected("btnUng");
+  if (amount <= 0 || selected.length === 0) {
+    alert("Nhập hệ số k và chọn ít nhất 1 người");
+    return;
+  }
+  selected.forEach(nv => {
+    data[nv].balance -= amount;
+    data[nv].history.unshift({
+      date: getTransactionDate(),
+      type: "Ứng",
+      amount: amount,
+      note: note
+    });
+  });
+  saveData();
+  closeModal("modalUng");
+  render();
+}
+
+function xacNhanTT() {
+  const kInput = document.getElementById("kTT").value.trim();
+  const note = document.getElementById("noteTT").value.trim() || "Thanh toán";
+  const selected = getSelected("btnTT");
+  if (selected.length === 0) {
+    alert("Chọn ít nhất 1 người");
+    return;
+  }
+
+  selected.forEach(nv => {
+    let amount;
+    if (kInput === "") {
+      amount = data[nv].balance < 0 ? Math.abs(data[nv].balance) : 0;
+    } else {
+      const k = parseInt(kInput) || 0;
+      amount = k * 1000;
+    }
+    if (amount > 0) {
+      data[nv].balance += amount;
+      data[nv].history.unshift({
+        date: getTransactionDate(),
+        type: "Thanh toán",
+        amount: amount,
+        note: note
+      });
+    }
+  });
+
+  saveData();
+  closeModal("modalTT");
+  render();
+}
+
+function showHistory(nv) {
+  document.getElementById("historyTitle").textContent = `Lịch sử - ${nv}`;
+  const list = document.getElementById("historyList");
+  const hist = data[nv].history;
+  if (hist.length === 0) {
+    list.innerHTML = "<p style='text-align:center;color:#65676b;padding:20px'>Chưa có giao dịch</p>";
+  } else {
+    list.innerHTML = hist.map(h => `
+      <div class="history-item">
+        <div><strong>${h.type}</strong> ${formatMoney(h.amount)}</div>
+        <div>${h.note}</div>
+        <div class="date">${h.date}</div>
+      </div>
+    `).join("");
+  }
+  document.getElementById("modalHistory").classList.add("active");
+}
+
+function renderNhanList(items, containerId) {
+  const list = document.getElementById(containerId);
+  if (items.length === 0) {
+    list.innerHTML = "<p style='text-align:center;color:#65676b;padding:20px'>Không có dữ liệu</p>";
+  } else {
+    list.innerHTML = items.map(h => `
+      <div class="day-item">
+        <div class="date-line">${h.date}</div>
+        <div class="detail">${h.count} × ${h.k} = ${formatMoney(h.total)}</div>
+        ${h.note ? `<div class="detail" style="color:#65676b;font-size:13px">${h.note}</div>` : ""}
+      </div>
+    `).join("");
+  }
+}
+
+function showChuaNhan() {
+  renderNhanList(data.nhanHistory, "chuaNhanList");
+  document.getElementById("modalChuaNhan").classList.add("active");
+}
+
+function showSoat() {
+  renderNhanList(data.archivedHistory, "soatList");
+  document.getElementById("modalSoat").classList.add("active");
+}
+
+function daNhanDu() {
+  if (data.nhanHistory.length === 0) {
+    alert("Không có lịch sử để xác nhận");
+    return;
+  }
+  const last = data.nhanHistory[0];
+  data.lastReceived = {
+    date: last.date,
+    amount: data.chuaNhan
+  };
+  data.archivedHistory = data.nhanHistory.concat(data.archivedHistory);
+  data.chuaNhan = 0;
+  data.nhanHistory = [];
+  saveData();
+  closeModal("modalChuaNhan");
+  render();
+}
+
+document.querySelectorAll(".modal").forEach(m => {
+  m.addEventListener("click", e => {
+    if (e.target === m) m.classList.remove("active");
+  });
+});
+
+render();
+</script>
+</body>
+</html>
